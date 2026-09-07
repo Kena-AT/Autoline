@@ -1,0 +1,5 @@
+# Shell integration scripts go here.
+# zsh: autoline.plugin.zsh (ZLE widget)
+# bash: autoline.bash (bind -x hook)
+# powershell: Autoline.psm1 (ICommandPredictor)
+# cmd: autoline.doskey (doskey macro fallback)

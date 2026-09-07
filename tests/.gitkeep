@@ -1,0 +1,4 @@
+# Integration and E2E tests
+# integration/: daemon + IPC end-to-end tests
+# fixtures/: pre-populated history DBs, sample configs
+# e2e/: shell-level automation tests (zsh/bash/PowerShell)

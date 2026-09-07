@@ -1,0 +1,4 @@
+# Packaging assets
+# npm/: npm wrapper package with postinstall binary fetch
+# pypi/: maturin-based PyPI wheels
+# ci/: GitHub Actions workflow files (release-matrix.yml, etc.)
