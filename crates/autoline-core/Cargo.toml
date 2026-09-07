@@ -1,0 +1,28 @@
+[package]
+name = "autoline-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core suggestion engine for Autoline: trie, n-gram, history store, cascade, and IPC protocol types"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
+rmp-serde = { workspace = true }
+rusqlite = { workspace = true }
+nucleo = { workspace = true }
+ulid = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+serde_json = { workspace = true }
+bincode = { workspace = true }
+dirs = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+proptest = { workspace = true }

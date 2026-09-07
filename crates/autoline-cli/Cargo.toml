@@ -1,0 +1,26 @@
+[package]
+name = "autoline-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Autoline CLI — init, status, daemon control, history management"
+
+[[bin]]
+name = "autoline"
+path = "src/main.rs"
+
+[dependencies]
+autoline-core = { path = "../autoline-core" }
+clap = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+dirs = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
