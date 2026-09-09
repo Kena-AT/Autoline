@@ -25,12 +25,20 @@ impl SuggestionCascade {
             prompt_trie: Trie::new(),
             history: None,
             ngram: PartitionedNgramModel::new(),
+            project_boost: 1.0,
         }
     }
 
     pub fn with_history(self, history: HistoryStore) -> Self {
         Self {
             history: Some(history),
+            ..self
+        }
+    }
+
+    pub fn with_project_boost(self, boost: f32) -> Self {
+        Self {
+            project_boost: boost,
             ..self
         }
     }
@@ -46,10 +54,20 @@ impl SuggestionCascade {
         self.ngram.train_line(kind, line);
     }
 
+    /// Detect current project from cwd and apply project-based scoring boost
+    fn compute_project_boost(cwd: &str) -> f32 {
+        let pid = crate::projects::detect_project(cwd);
+        match pid {
+            Some(_) => 2.0,     // 2x boost for same project
+            None => 1.0,        // no project context
+        }
+    }
+
     pub fn suggest(&self, line: &str, cwd: &str) -> SuggestResponse {
-        let _ = cwd;
         let InputKind::Command(kind) = classify(line);
         let trimmed = line.trim_end_matches(|c: char| c.is_whitespace());
+
+        let project_boost = Self::compute_project_boost(cwd);
 
         if !trimmed.is_empty() {
             let trie = match kind {
@@ -61,10 +79,11 @@ impl SuggestionCascade {
                 if let Some(rest) = suffix.strip_prefix(trimmed) {
                     let trimmed_rest = rest.trim_start_matches(|c: char| c.is_whitespace());
                     if !trimmed_rest.is_empty() {
+                        let confidence = clamp(weight * project_boost);
                         return SuggestResponse {
                             suggestion: Some(rest.to_string()),
                             source: SuggestionSource::Trie,
-                            confidence: clamp(weight),
+                            confidence,
                         };
                     }
                 }
@@ -74,22 +93,23 @@ impl SuggestionCascade {
         if let Some(store) = &self.history {
             if let Ok(matches) = store.prefix_match(trimmed, Some(kind), 5) {
                 if let Some(best) = matches.first() {
+                    // Apply project boost if we're in a project
+                    let history_confidence = (best.used_count.min(10) as f32 / 10.0) * 0.9 * project_boost;
                     if let Some(rest) = best.line.strip_prefix(line) {
-                        let confidence = (best.used_count.min(10) as f32 / 10.0) * 0.9;
                         return SuggestResponse {
                             suggestion: Some(rest.to_string()),
                             source: SuggestionSource::History,
-                            confidence: clamp(confidence),
+                            confidence: clamp(history_confidence),
                         };
                     }
                     if let Some(rest) = best.line.strip_prefix(trimmed) {
                         if line.len() >= trimmed.len() {
                             let pad = " ".repeat(line.len() - trimmed.len());
-                            let confidence = (best.used_count.min(10) as f32 / 10.0) * 0.9;
+                            let history_confidence = (best.used_count.min(10) as f32 / 10.0) * 0.9 * project_boost;
                             return SuggestResponse {
                                 suggestion: Some(format!("{}{}", pad, rest)),
                                 source: SuggestionSource::History,
-                                confidence: clamp(confidence),
+                                confidence: clamp(history_confidence),
                             };
                         }
                     }
