@@ -22,7 +22,10 @@ anyhow = { workspace = true }
 serde_json = { workspace = true }
 bincode = { workspace = true }
 dirs = { workspace = true }
+reqwest = { version = "0.13.3", features = ["json"] }
+tokio = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
 proptest = { workspace = true }
+tokio = { workspace = true }

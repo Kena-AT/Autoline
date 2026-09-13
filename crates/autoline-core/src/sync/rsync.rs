@@ -3,10 +3,8 @@
 /// Uses the `rsync` command-line tool to transfer history database files
 /// between machines. Designed for environments where rsync is available
 /// and network connectivity is reliable.
-use crate::sync::{merge_histories, sync_key_from_row, LamportClock, SyncedHistoryEntry};
-use crate::history::HistoryRow;
+use crate::sync::crdt::{merge_histories, sync_key_from_row, LamportClock, SyncedHistoryEntry};
 use std::process::Command;
-use std::collections::HashSet;
 
 /// Result of an rsync operation.
 #[derive(Debug, Clone)]

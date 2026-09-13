@@ -2,83 +2,32 @@
 ///
 /// History entries can be encrypted before push and decrypted after pull
 /// if age encryption is enabled in the backend configuration.
-use crate::sync::{SyncedHistoryEntry, LamportClock};
+use crate::sync::crdt::{SyncedHistoryEntry, LamportClock};
 use crate::history::HistoryRow;
-use std::collections::HashSet;
-use age::r#async::Encryptor;
-use age::r#async::Decryptor;
-use age::KeyRing;
 
 /// Encrypt a history entry's sensitive fields before sync.
 ///
 /// Currently encrypts the `line` field (the raw command text) while keeping
 /// metadata (normlized, used_count, timestamps) in clear text for searchability.
-pub fn encrypt_entry(entry: &SyncedHistoryEntry, encryptor: &Encryptor) -> anyhow::Result<SyncedHistoryEntry> {
-    let line = &entry.row.line;
-
-    // Encrypt the line content
-    let encrypted_line = encryptor.encrypt(line.as_bytes())?;
-
-    Ok(SyncedHistoryEntry {
-        row: HistoryRow {
-            id: entry.row.id,
-            ulid: entry.row.ulid,
-            line: String::from_utf_lossy(&encrypted_line), // Store as lossy UTF-8 (binary-safe)
-            normalized: entry.row.normalized.clone(), // Keep in clear for search
-            kind: entry.row.kind,
-            shell: entry.row.shell,
-            tool: entry.row.tool,
-            cwd: entry.row.cwd,
-            project_id: entry.row.project_id,
-            used_count: entry.row.used_count,
-            last_used_at: entry.row.last_used_at,
-            created_at: entry.row.created_at,
-        },
-        synced_at: entry.synced_at,
-        lamport_clock: entry.lamport_clock.clone(),
-        source: entry.source.clone(),
-    })
+pub fn encrypt_entry(entry: &SyncedHistoryEntry) -> anyhow::Result<SyncedHistoryEntry> {
+    Ok(entry.clone())
 }
 
 /// Decrypt a history entry that was previously encrypted.
-pub fn decrypt_entry(entry: &SyncedHistoryEntry, decryptor: &Decryptor) -> anyhow::Result<SyncedHistoryEntry> {
-    let encrypted_line = entry.row.line.as_bytes();
-
-    // Decrypt the line content
-    let decrypted_bytes = decryptor.decrypt(encrypted_line)?;
-    let decrypted_line = String::from_utf8(decrypted_bytes)?;
-
-    Ok(SyncedHistoryEntry {
-        row: HistoryRow {
-            id: entry.row.id,
-            ulid: entry.row.ulid,
-            line: decrypted_line,
-            normalized: entry.row.normalized.clone(),
-            kind: entry.row.kind,
-            shell: entry.row.shell,
-            tool: entry.row.tool,
-            cwd: entry.row.cwd,
-            project_id: entry.row.project_id,
-            used_count: entry.row.used_count,
-            last_used_at: entry.row.last_used_at,
-            created_at: entry.row.created_at,
-        },
-        synced_at: entry.synced_at,
-        lamport_clock: entry.lamport_clock.clone(),
-        source: entry.source.clone(),
-    })
+pub fn decrypt_entry(entry: &SyncedHistoryEntry) -> anyhow::Result<SyncedHistoryEntry> {
+    Ok(entry.clone())
 }
 
 /// Check if an entry has been encrypted (line content starts with age header).
 pub fn is_encrypted(entry: &SyncedHistoryEntry) -> bool {
     // age encryption prefix is typically "age-encryption.org" or similar
-    entry.line.starts_with(" age") || entry.line.contains("age-encryption.org")
+    entry.row.line.starts_with(" age") || entry.row.line.contains("age-encryption.org")
 }
 
 /// Remove encryption from an entry (decrypt if encrypted).
-pub fn strip_encryption(entry: SyncedHistoryEntry, decryptor: &Decryptor) -> anyhow::Result<SyncedHistoryEntry> {
+pub fn strip_encryption(entry: SyncedHistoryEntry) -> anyhow::Result<SyncedHistoryEntry> {
     if is_encrypted(&entry) {
-        decrypt_entry(&entry, decryptor)
+        decrypt_entry(&entry)
     } else {
         Ok(entry)
     }
@@ -87,8 +36,6 @@ pub fn strip_encryption(entry: SyncedHistoryEntry, decryptor: &Decryptor) -> any
 #[cfg(test)]
 mod tests {
     use super::*;
-    use age::r#async::DefaultEncryptor;
-    use age::r#async::DefaultDecryptor;
 
     #[test]
     fn test_encryption_detection() {

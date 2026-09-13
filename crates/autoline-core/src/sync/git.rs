@@ -2,11 +2,9 @@
 ///
 /// Uses a local Git repository to push/pull history entries as tarballs.
 /// No external git server is required — the user provides a local bare repo path.
-use crate::sync::{merge_histories, sync_key_from_row, LamportClock, SyncedHistoryEntry};
-use crate::history::HistoryRow;
-use std::path::Path;
+use crate::sync::crdt::{merge_histories, sync_key_from_row, LamportClock, SyncedHistoryEntry};
+use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::collections::HashSet;
 
 /// Result of a Git sync operation.
 #[derive(Debug, Clone)]
@@ -148,7 +146,7 @@ impl GitSyncBackend {
         // Stage and commit any changes
         let _ = Command::new("git")
             .arg("add")
-            .(".")
+            .arg(".")
             .output();
 
         let commit_output = Command::new("git")
@@ -169,7 +167,7 @@ impl GitSyncBackend {
             .arg("main")
             .output();
 
-        if push_output.is_some() {
+        if push_output.is_ok() {
             let push_out = push_output.unwrap();
             if !push_out.status.success() {
                 let stderr = String::from_utf8_lossy(&push_out.stderr);
@@ -201,7 +199,6 @@ impl Default for GitSyncBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::history::HistoryKind;
     use tempfile::tempdir;
 
     #[test]

@@ -2,8 +2,7 @@
 ///
 /// Communicates with a remote sync server via HTTP API.
 /// Designed to be simple and deployable (e.g., as a Docker container).
-use crate::sync::{merge_histories, sync_key_from_row, LamportClock, SyncedHistoryEntry};
-use crate::history::HistoryRow;
+use crate::sync::crdt::{merge_histories, sync_key_from_row, LamportClock, SyncedHistoryEntry};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -74,7 +73,7 @@ impl HttpSyncBackend {
         }
 
         let url = format!("{}/sync/since?clock={}", self.base_url, self.lamport_clock.counter);
-        let resp = self.client.get(&url).send().await?;
+        let resp: reqwest::Response = self.client.get(&url).send().await?;
 
         if resp.status().is_client_error() || resp.status().is_server_error() {
             let status = resp.status();
@@ -90,7 +89,7 @@ impl HttpSyncBackend {
         }
 
         // Dedupe: only keep entries we don't already have
-        let existing_keys: HashSet<String> = sync_resp.entries
+        let _existing_keys: HashSet<String> = sync_resp.entries
             .iter()
             .map(|e| sync_key_from_row(&e.row).clone())
             .collect();
@@ -113,7 +112,7 @@ impl HttpSyncBackend {
         };
 
         let url = format!("{}/sync/append", self.base_url);
-        let resp = self.client.post(&url).json(&req).send().await?;
+        let resp: reqwest::Response = self.client.post(&url).json(&req).send().await?;
 
         if resp.status().is_client_error() || resp.status().is_server_error() {
             let status = resp.status();

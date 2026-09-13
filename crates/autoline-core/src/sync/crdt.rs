@@ -3,10 +3,11 @@
 /// Uses a Lamport clock for causality tracking and ensures deterministic,
 /// commutative merge of history entries.
 use crate::history::HistoryRow;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// A Lamport timestamp for tracking causality in sync operations.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LamportClock {
     /// The clock value
     pub counter: u64,
@@ -32,7 +33,7 @@ impl LamportClock {
 }
 
 /// A history entry with sync metadata.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncedHistoryEntry {
     /// The original history row
     pub row: HistoryRow,
@@ -63,14 +64,13 @@ pub fn merge_histories(
 
     for local_entry in local.iter_mut() {
         if let Some(remote_entry) = remote_map.get(&local_entry.row.normalized) {
-            // Merge clocks: take the maximum
-            local_entry.lamport_clock.merge(&remote_entry.lamport_clock);
             // If remote has a higher lamport clock, use remote's entry
-            if remote_entry.lamport_clock.counter > local_entry.lamport_clock.counter
-            {
+            if remote_entry.lamport_clock.counter > local_entry.lamport_clock.counter {
                 *local_entry = remote_entry.clone();
+            } else {
+                // Otherwise keep local, but ensure clock is maxed (though it already should be >=)
+                local_entry.lamport_clock.merge(&remote_entry.lamport_clock);
             }
-            // If equal, keep local (commutative choice)
         }
         // If entry only in local, keep it
     }
