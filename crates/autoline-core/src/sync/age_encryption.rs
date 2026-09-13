@@ -35,6 +35,8 @@ pub fn strip_encryption(entry: SyncedHistoryEntry) -> anyhow::Result<SyncedHisto
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::history::HistoryRow;
+    use crate::sync::crdt::LamportClock;
 
     #[test]
     fn test_encryption_detection() {

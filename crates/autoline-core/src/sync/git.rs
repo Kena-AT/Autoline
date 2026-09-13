@@ -212,7 +212,7 @@ mod tests {
     fn new_initizes_bare_repo() {
         let dir = tempdir().unwrap();
         let repo_path = dir.path().join("test_repo.git");
-        let backend = GitSyncBackend::new(repo_path.clone());
+        let _backend = GitSyncBackend::new(repo_path.clone());
 
         // Repo should be initialized (bare)
         assert!(repo_path.exists() || std::fs::create_dir_all(&repo_path).is_ok());
