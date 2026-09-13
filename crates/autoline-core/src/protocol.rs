@@ -44,19 +44,60 @@ pub struct RecordCommandPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DaemonStatusResponse {
+    pub pid: u32,
+    pub uptime_secs: u64,
+    pub history_count: u64,
+    pub models_active: bool,
+    pub version: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Request {
     Suggest(SuggestRequest),
     RecordCommand(RecordCommandPayload),
     Ping,
+    Status,
     ReloadModel,
+    Shutdown,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Response {
     Suggestion(SuggestResponse),
+    Status(DaemonStatusResponse),
     Ack,
     Pong,
     Error(String),
+}
+
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+
+pub async fn read_framed_msg<T, R>(reader: &mut R) -> anyhow::Result<T>
+where
+    T: for<'de> Deserialize<'de>,
+    R: AsyncRead + Unpin,
+{
+    let mut len_buf = [0u8; 4];
+    reader.read_exact(&mut len_buf).await?;
+    let len = u32::from_be_bytes(len_buf) as usize;
+    let mut payload = vec![0u8; len];
+    reader.read_exact(&mut payload).await?;
+    let val: T = rmp_serde::from_slice(&payload)?;
+    Ok(val)
+}
+
+pub async fn write_framed_msg<T, W>(writer: &mut W, val: &T) -> anyhow::Result<()>
+where
+    T: Serialize,
+    W: AsyncWrite + Unpin,
+{
+    let payload = rmp_serde::to_vec_named(val)?;
+    let len = payload.len() as u32;
+    writer.write_all(&len.to_be_bytes()).await?;
+    writer.write_all(&payload).await?;
+    writer.flush().await?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -122,6 +163,8 @@ mod tests {
     #[test]
     fn request_enum_roundtrip() {
         roundtrip_msgpack(&Request::Ping);
+        roundtrip_msgpack(&Request::Status);
+        roundtrip_msgpack(&Request::Shutdown);
         roundtrip_msgpack(&Request::ReloadModel);
 
         let req = Request::Suggest(SuggestRequest {
@@ -139,6 +182,13 @@ mod tests {
     fn response_enum_roundtrip() {
         roundtrip_msgpack(&Response::Ack);
         roundtrip_msgpack(&Response::Pong);
+        roundtrip_msgpack(&Response::Status(DaemonStatusResponse {
+            pid: 1234,
+            uptime_secs: 42,
+            history_count: 100,
+            models_active: true,
+            version: "0.1.0".to_string(),
+        }));
         roundtrip_msgpack(&Response::Error("oops".to_string()));
     }
 

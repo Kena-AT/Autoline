@@ -11,6 +11,12 @@ pub struct HistoryStore {
 }
 
 impl HistoryStore {
+    pub fn default_path() -> std::path::PathBuf {
+        dirs::data_local_dir()
+            .map(|d| d.join("autoline/history.db"))
+            .unwrap_or_else(|| std::path::PathBuf::from(".local/share/autoline/history.db"))
+    }
+
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
         if let Some(parent) = path.parent() {
@@ -235,6 +241,41 @@ CREATE TABLE IF NOT EXISTS history_project (
     pub fn clear(&mut self) -> Result<u64> {
         let changes = self.conn.execute("DELETE FROM history_global", [])?;
         Ok(changes as u64)
+    }
+
+    pub fn get_synced_entries(&self) -> Result<Vec<crate::sync::crdt::SyncedHistoryEntry>> {
+        let rows = self.all(10_000)?;
+        let entries = rows
+            .into_iter()
+            .map(|r| crate::sync::crdt::SyncedHistoryEntry {
+                synced_at: unix_now(),
+                lamport_clock: crate::sync::crdt::LamportClock { counter: 1 },
+                source: self.machine_id.clone(),
+                row: r,
+            })
+            .collect();
+        Ok(entries)
+    }
+
+    pub fn apply_merged_entries(
+        &mut self,
+        entries: &[crate::sync::crdt::SyncedHistoryEntry],
+    ) -> Result<usize> {
+        let mut inserted = 0;
+        for entry in entries {
+            let row = &entry.row;
+            let pid = row.project_id.as_ref().map(|p| crate::projects::ProjectId(p.clone()));
+            let _ = self.insert(
+                &row.line,
+                row.kind,
+                row.shell,
+                row.cwd.as_deref(),
+                row.tool.as_deref(),
+                pid.as_ref(),
+            )?;
+            inserted += 1;
+        }
+        Ok(inserted)
     }
 }
 

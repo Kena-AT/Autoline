@@ -62,6 +62,48 @@ impl SuggestionCascade {
         self.ngram.train_line(kind, line);
     }
 
+    pub fn history(&self) -> Option<&HistoryStore> {
+        self.history.as_ref()
+    }
+
+    pub fn history_mut(&mut self) -> Option<&mut HistoryStore> {
+        self.history.as_mut()
+    }
+
+    /// Load recent history entries from the store into Trie and N-gram models
+    pub fn load_from_history(&mut self, limit: usize) -> anyhow::Result<usize> {
+        let mut count = 0;
+        if let Some(store) = &self.history {
+            let entries = store.all(limit)?;
+            for row in entries {
+                let weight = (row.used_count.min(10) as f32 / 10.0).max(0.1);
+                self.insert_trie(row.kind, &row.normalized, row.line.clone(), weight);
+                self.train_ngram(row.kind, &row.line);
+                count += 1;
+            }
+        }
+        Ok(count)
+    }
+
+    /// Record a command into the persistent history store and train models
+    pub fn record(
+        &mut self,
+        line: &str,
+        kind: HistoryKind,
+        shell: Option<crate::history::ShellKind>,
+        cwd: Option<&str>,
+        tool: Option<&str>,
+        project_id: Option<&crate::projects::ProjectId>,
+    ) -> anyhow::Result<i64> {
+        self.insert_trie(kind, &line.to_lowercase(), line.to_string(), 0.5);
+        self.train_ngram(kind, line);
+        if let Some(store) = &mut self.history {
+            store.insert(line, kind, shell, cwd, tool, project_id)
+        } else {
+            Ok(0)
+        }
+    }
+
     pub fn suggest(&self, line: &str, cwd: &str) -> SuggestResponse {
         let InputKind::Command(kind) = classify(line);
         let trimmed = line.trim_end_matches(|c: char| c.is_whitespace());
