@@ -6,3 +6,4 @@ pub mod cascade;
 pub mod classify;
 pub mod protocol;
 pub mod projects;
+pub mod sync;

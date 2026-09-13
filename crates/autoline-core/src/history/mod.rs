@@ -58,7 +58,7 @@ impl ShellKind {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryRow {
     pub id: i64,
     pub ulid: String,
