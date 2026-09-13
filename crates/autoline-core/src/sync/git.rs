@@ -2,8 +2,8 @@
 ///
 /// Uses a local Git repository to push/pull history entries as tarballs.
 /// No external git server is required — the user provides a local bare repo path.
-use crate::sync::crdt::{merge_histories, sync_key_from_row, LamportClock, SyncedHistoryEntry};
-use std::path::{Path, PathBuf};
+use crate::sync::crdt::LamportClock;
+use std::path::PathBuf;
 use std::process::Command;
 
 /// Result of a Git sync operation.

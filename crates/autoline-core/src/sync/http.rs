@@ -2,7 +2,7 @@
 ///
 /// Communicates with a remote sync server via HTTP API.
 /// Designed to be simple and deployable (e.g., as a Docker container).
-use crate::sync::crdt::{merge_histories, sync_key_from_row, LamportClock, SyncedHistoryEntry};
+use crate::sync::crdt::{sync_key_from_row, LamportClock, SyncedHistoryEntry};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;

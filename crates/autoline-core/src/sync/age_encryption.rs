@@ -2,8 +2,7 @@
 ///
 /// History entries can be encrypted before push and decrypted after pull
 /// if age encryption is enabled in the backend configuration.
-use crate::sync::crdt::{SyncedHistoryEntry, LamportClock};
-use crate::history::HistoryRow;
+use crate::sync::crdt::SyncedHistoryEntry;
 
 /// Encrypt a history entry's sensitive fields before sync.
 ///
