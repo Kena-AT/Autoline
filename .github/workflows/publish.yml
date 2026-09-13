@@ -8,7 +8,7 @@ jobs:
   crates-io:
     name: Publish to crates.io
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'v')
+    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - uses: actions/checkout@v4
@@ -18,42 +18,13 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Publish to crates.io
-        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
-
-
-  npm:
-    name: Publish to npm
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'v')
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Publish to npm
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
         run: |
-          npm version ${{ github.ref_name v9 }}
-          npm publish
-
-  pypi:
-    name: Publish to PyPI
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'v')
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Publish to PyPI
-        run: |
-          pip install twine
-          python -m twine upload dist/*wheel*
+          cargo publish -p autoline-core
+          cargo publish -p autolined
+          cargo publish -p autoline-cli
