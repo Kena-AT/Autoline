@@ -16,19 +16,19 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: autolined-linux-x86_64
-            bin: autolined
+            ext: ""
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: autolined-macos-aarch64
-            bin: autolined
+            ext: ""
           - os: macos-latest
             target: x86_64-apple-darwin
             artifact_name: autolined-macos-x86_64
-            bin: autolined
+            ext: ""
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: autolined-windows-x86_64
-            bin: autolined.exe
+            ext: ".exe"
 
     steps:
       - uses: actions/checkout@v4
@@ -42,14 +42,16 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Build binary
+      - name: Build binaries
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.bin }}
+          path: |
+            target/${{ matrix.target }}/release/autolined${{ matrix.ext }}
+            target/${{ matrix.target }}/release/autoline${{ matrix.ext }}
           if-no-files-found: error
 
   publish:
@@ -70,6 +72,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "v${{ github.ref_name }}"
+          name: ${{ github.ref_name }}
           files: release-artifacts/**/*
           generate_release_notes: true
