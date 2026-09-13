@@ -28,6 +28,11 @@ enum Commands {
         #[command(subcommand)]
         cmd: HistoryCmd,
     },
+    /// Project management
+    Project {
+        #[command(subcommand)]
+        cmd: ProjectCmd,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -42,6 +47,20 @@ enum DaemonCmd {
 enum HistoryCmd {
     Clear,
     Export,
+}
+
+#[derive(Debug, Subcommand)]
+enum ProjectCmd {
+    List,
+    Rename {
+        #[arg(value_name = "NEW_NAME")]
+        new_name: String,
+    },
+    Forget {
+        #[arg(value_name = "PROJECT_ID")]
+        project_id: String,
+    },
+    Prune,
 }
 
 fn main() -> Result<()> {
@@ -67,6 +86,9 @@ fn main() -> Result<()> {
         }
         Commands::History { cmd } => {
             handle_history(cmd)?;
+        }
+        Commands::Project { cmd } => {
+            handle_project(cmd)?;
         }
     }
 
@@ -166,6 +188,78 @@ fn handle_history(cmd: HistoryCmd) -> Result<()> {
         }
         HistoryCmd::Export => {
             println!("History export requested");
+            Ok(())
+        }
+    }
+}
+
+fn handle_project(cmd: ProjectCmd) -> Result<()> {
+    match cmd {
+        ProjectCmd::List => {
+            if let Some(data_dir) = dirs::data_local_dir() {
+                let autoline_dir = data_dir.join("autoline");
+                if autoline_dir.exists() {
+                    println!("Project directories under: {:?}", autoline_dir);
+                    // List subdirectories that look like projects
+                    if let Ok(entries) = std::fs::read_dir(&autoline_dir) {
+                        for entry in entries.flatten() {
+                            let path = entry.path();
+                            if path.is_dir() && path.join(".autoline.project").exists() {
+                                println!("  - {} (autoline project)", path.display());
+                            }
+                        }
+                    }
+                } else {
+                    warn!("Data directory not found");
+                }
+            } else {
+                warn!("Could not determine data directory");
+            }
+            Ok(())
+        }
+        ProjectCmd::Rename { new_name } => {
+            if let Some(data_dir) = dirs::data_local_dir() {
+                let autoline_dir = data_dir.join("autoline");
+                if autoline_dir.exists() {
+                    println!("Rename project to: {}", new_name);
+                    // TODO: Implement actual rename logic
+                    println!("  (rename not yet implemented)");
+                } else {
+                    warn!("Data directory not found");
+                }
+            } else {
+                warn!("Could not determine data directory");
+            }
+            Ok(())
+        }
+        ProjectCmd::Forget { project_id } => {
+            if let Some(data_dir) = dirs::data_local_dir() {
+                let autoline_dir = data_dir.join("autoline");
+                if autoline_dir.exists() {
+                    println!("Forget project: {}", project_id);
+                    // TODO: Implement actual forget logic
+                    println!("  (forget not yet implemented)");
+                } else {
+                    warn!("Data directory not found");
+                }
+            } else {
+                warn!("Could not determine data directory");
+            }
+            Ok(())
+        }
+        ProjectCmd::Prune => {
+            if let Some(data_dir) = dirs::data_local_dir() {
+                let autoline_dir = data_dir.join("autoline");
+                if autoline_dir.exists() {
+                    println!("Prune removed projects");
+                    // TODO: Implement prune logic
+                    println!("  (prune not yet implemented)");
+                } else {
+                    warn!("Data directory not found");
+                }
+            } else {
+                warn!("Could not determine data directory");
+            }
             Ok(())
         }
     }
