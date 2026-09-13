@@ -37,18 +37,6 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Cache Cargo build
-        uses: actions-rs/cache@v2
-        with:
-          key: cargo-build-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-build-${{ runner.os }}-
-
-      - name: Cache test results
-        uses: actions-rs/cache@v2
-        with:
-          key: cargo-test-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-
       - name: Cargo test
         run: cargo test --workspace --profile=cc
 
