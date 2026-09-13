@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            rust: 1.70
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            rust: 1.70
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            rust: 1.70
+            target: x86_64-pc-windows-gnu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/setup-rust@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Cache Cargo registry
+        uses: actions-rs/cache@v2
+        with:
+          key: cargo-registry-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache Cargo build
+        uses: actions-rs/cache@v2
+        with:
+          key: cargo-build-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-build-${{ runner.os }}-
+
+      - name: Cache test results
+        uses: actions-rs/cache@v2
+        with:
+          key: cargo-test-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          workspace: true
+          args: --profile=cc
+
+      - name: Cargo check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --all-targets
+
+      - name: Cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          workspace: true
+          args: --all-targets -- -Dwarnings
+
+      - name: Cargo fmt check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --check
+
+  build:
+    name: Build on ${{ matrix.os }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            args: --release
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            args: --release
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            args: --release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/setup-rust@v1
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo registry
+        uses: actions-rs/cache@v2
+        with:
+          key: cargo-registry-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cargo build (release)
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release ${{ matrix.args }}
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: autolined-${{ runner.os }}-${{ matrix.target }}
+          path: target/release/autolined
+
+  publish:
+    name: Publish to crates.io
+    needs: [test, build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/setup-rust@v1
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo registry
+        uses: actions-rs/cache@v2
+        with:
+          key: cargo-registry-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Publish crate
+        uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: --token ${{ secrets.CRATES_IO_TOKEN }}
+          dry_run: true
